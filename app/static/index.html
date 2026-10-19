@@ -190,25 +190,36 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: "&copy; OpenStreetMap contributors",
 }).addTo(map);
-markerLayer = L.layerGroup().addTo(map);
+markerLayer = L.featureGroup().addTo(map); // featureGroup: punya getBounds()
 
 function statusColor(status) {
   return status === "active" ? "#3fb950" : status === "offline" ? "#f85149" : "#6e7681";
 }
 
 /* ---------------- Muat data ---------------- */
+const PAGE_SIZE = 200; // sama dengan batas maksimal API (limit<=200)
+
 async function loadCatalog() {
   try {
-    const res = await fetch(API + "/cameras?limit=500");
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    cameras = data.items || [];
+    // Ambil katalog per halaman sampai habis (API maks 200 item/halaman)
+    let page = 1;
+    const all = [];
+    let pages = 1;
+    do {
+      const res = await fetch(API + "/cameras?limit=" + PAGE_SIZE + "&page=" + page);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      all.push(...(data.items || []));
+      pages = data.pages || 1;
+      page += 1;
+    } while (page <= pages);
+    cameras = all;
     fillCountryFilter();
     render();
-    updateHealth(true, data.total);
+    updateHealth(true, all.length);
   } catch (err) {
     document.getElementById("camList").innerHTML =
-      '<div class="empty">Gagal memuat katalog.<br>Pastikan server berjalan dan<br>coba muat ulang halaman.</div>';
+      '<div class="empty">Gagal memuat katalog (' + err.message + ").<br>Pastikan server berjalan dan<br>coba muat ulang halaman.</div>";
     updateHealth(false, 0);
   }
 }
@@ -217,7 +228,7 @@ function updateHealth(ok, total) {
   const pill = document.getElementById("healthPill");
   if (ok) {
     pill.className = "pill ok";
-    pill.textContent = "API online &middot; " + total + " kamera";
+    pill.textContent = "API online · " + total + " kamera";
   } else {
     pill.className = "pill bad";
     pill.textContent = "API tidak terjangkau";
