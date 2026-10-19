@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CCTV Public Viewer</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1c2330;
+    --line: #26303d;
+    --text: #e6edf3;
+    --muted: #8b98a5;
+    --accent: #2f81f7;
+    --ok: #3fb950;
+    --bad: #f85149;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+  }
+  /* ---------- Header ---------- */
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .brand small { color: var(--muted); font-weight: 400; }
+  .spacer { flex: 1; }
+  .pill {
+    font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
+  }
+  .pill.ok { color: var(--ok); border-color: rgba(63,185,80,.4); }
+  .pill.bad { color: var(--bad); border-color: rgba(248,81,73,.4); }
+  header a { color: var(--accent); text-decoration: none; font-size: 13px; white-space: nowrap; }
+  /* ---------- Layout ---------- */
+  main { flex: 1; display: flex; min-height: 0; }
+  aside {
+    width: 350px; min-width: 280px;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column;
+  }
+  .filters { padding: 12px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+  .filters input, .filters select {
+    width: 100%; padding: 8px 10px;
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px; font-size: 13px;
+    outline: none;
+  }
+  .filters input:focus, .filters select:focus { border-color: var(--accent); }
+  .filters .row { display: flex; gap: 8px; }
+  #camList { flex: 1; overflow-y: auto; padding: 8px; }
+  .cam {
+    display: flex; gap: 10px; align-items: center;
+    padding: 8px; margin-bottom: 6px;
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 10px; cursor: pointer;
+  }
+  .cam:hover { border-color: var(--accent); }
+  .thumb {
+    width: 74px; height: 46px; border-radius: 6px; flex: none;
+    background: repeating-linear-gradient(45deg, #11161d 0 6px, #0d1117 6px 12px);
+    display: flex; align-items: center; justify-content: center;
+    color: #3d4a5a; font-size: 9px; letter-spacing: 1px; overflow: hidden;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .cam .info { min-width: 0; }
+  .cam .title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cam .meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+  .st { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .st.active { background: var(--ok); } .st.offline { background: var(--bad); } .st.unknown { background: #6e7681; }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 16px; line-height: 1.6; }
+  .note { padding: 8px 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.5; }
+  /* ---------- Map ---------- */
+  #map { flex: 1; min-height: 0; background: var(--bg); }
+  .leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); border-radius: 10px; }
+  .leaflet-popup-tip { background: var(--panel); }
+  .popup-title { font-weight: 700; font-size: 13px; margin-bottom: 2px; max-width: 220px; }
+  .popup-meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  .btn {
+    display: inline-block; padding: 5px 12px; font-size: 12.5px; font-weight: 600;
+    background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer;
+  }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+  /* ---------- Modal pemutar ---------- */
+  .overlay {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,.65); z-index: 2000; padding: 20px;
+  }
+  .overlay.open { display: flex; }
+  .player-card {
+    width: min(880px, 96vw);
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .player-head { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; }
+  .player-head .pt { font-weight: 700; font-size: 15px; }
+  .player-head .pm { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+  .chips { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 11px; color: var(--accent); border: 1px solid rgba(47,129,247,.4); padding: 2px 8px; border-radius: 999px; }
+  #playerBox { aspect-ratio: 16/9; background: #000; }
+  #playerBox video, #playerBox iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .player-warn { color: var(--muted); font-size: 13px; padding: 20px; text-align: center; }
+  .player-foot { display: flex; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  @media (max-width: 720px) {
+    aside { position: absolute; z-index: 1500; height: calc(100% - 53px); transform: translateX(-100%); transition: transform .2s; }
+    aside.show { transform: none; }
+    #menuBtn { display: inline-block; }
+  }
+  #menuBtn { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <button id="menuBtn" class="btn ghost" onclick="document.querySelector('aside').classList.toggle('show')">Daftar</button>
+  <div class="brand"><span class="dot"></span> CCTV Public Viewer <small>&middot; hanya kamera publik resmi/berizin</small></div>
+  <div class="spacer"></div>
+  <span id="healthPill" class="pill">memuat&hellip;</span>
+  <a href="/docs" target="_blank" rel="noopener">API Docs</a>
+</header>
+
+<main>
+  <aside>
+    <div class="filters">
+      <input id="q" type="search" placeholder="Cari nama kamera / kota / negara&hellip;" />
+      <div class="row">
+        <select id="fCountry"><option value="">Semua negara</option></select>
+        <select id="fStatus">
+          <option value="">Semua status</option>
+          <option value="active">Online</option>
+          <option value="offline">Offline</option>
+        </select>
+      </div>
+    </div>
+    <div id="camList"><div class="empty">Memuat katalog&hellip;</div></div>
+    <div class="note">
+      Data hanya berupa katalog metadata. Pemutaran memakai player resmi dari
+      pemilik stream (HLS berizin / embed Windy). Patuhi hukum &amp; privasi setempat.
+    </div>
+  </aside>
+  <div id="map"></div>
+</main>
+
+<div id="overlay" class="overlay">
+  <div class="player-card">
+    <div class="player-head">
+      <div style="flex:1; min-width:0;">
+        <div class="pt" id="pTitle"></div>
+        <div class="pm" id="pMeta"></div>
+        <div class="chips" id="pChips"></div>
+      </div>
+      <button class="btn ghost" onclick="closePlayer()">Tutup</button>
+    </div>
+    <div id="playerBox"></div>
+    <div class="player-foot">
+      <a id="pPage" class="btn ghost" style="display:none" target="_blank" rel="noopener">Buka halaman asli</a>
+      <a id="pJson" class="btn ghost" target="_blank" rel="noopener">Data JSON</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<script>
+"use strict";
+const API = window.location.origin + "/api";
+let cameras = [];
+let hls = null;
+let markerLayer = null;
+
+/* ---------------- Peta ---------------- */
+const map = L.map("map").setView([-2.5, 118], 5);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: "&copy; OpenStreetMap contributors",
+}).addTo(map);
+markerLayer = L.layerGroup().addTo(map);
+
+function statusColor(status) {
+  return status === "active" ? "#3fb950" : status === "offline" ? "#f85149" : "#6e7681";
+}
+
+/* ---------------- Muat data ---------------- */
+async function loadCatalog() {
+  try {
+    const res = await fetch(API + "/cameras?limit=500");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    cameras = data.items || [];
+    fillCountryFilter();
+    render();
+    updateHealth(true, data.total);
+  } catch (err) {
+    document.getElementById("camList").innerHTML =
+      '<div class="empty">Gagal memuat katalog.<br>Pastikan server berjalan dan<br>coba muat ulang halaman.</div>';
+    updateHealth(false, 0);
+  }
+}
+
+function updateHealth(ok, total) {
+  const pill = document.getElementById("healthPill");
+  if (ok) {
+    pill.className = "pill ok";
+    pill.textContent = "API online &middot; " + total + " kamera";
+  } else {
+    pill.className = "pill bad";
+    pill.textContent = "API tidak terjangkau";
+  }
+}
+
+function fillCountryFilter() {
+  const sel = document.getElementById("fCountry");
+  const seen = new Map();
+  cameras.forEach((c) => {
+    const name = c.country_name || c.country;
+    if (name && !seen.has(name)) seen.set(name, c.country || "");
+  });
+  [...seen.entries()].sort((a, b) => a[0].localeCompare(b[0])).forEach(([name, code]) => {
+    const opt = document.createElement("option");
+    opt.value = code || name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+}
+
+/* ---------------- Filter & render ---------------- */
+function filtered() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const country = document.getElementById("fCountry").value;
+  const status = document.getElementById("fStatus").value;
+  return cameras.filter((c) => {
+    if (country && (c.country || "").toUpperCase() !== country.toUpperCase()) return false;
+    if (status && c.status !== status) return false;
+    if (q) {
+      const hay = [c.title, c.city, c.region, c.country_name, c.country]
+        .filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function render() {
+  const list = filtered();
+  renderList(list);
+  renderMarkers(list);
+}
+
+function renderList(list) {
+  const box = document.getElementById("camList");
+  if (!list.length) {
+    box.innerHTML = '<div class="empty">Tidak ada kamera yang cocok.<br><br>Jalankan sinkronisasi Windy dari <code>/docs</code> atau tambahkan kamera manual.</div>';
+    return;
+  }
+  box.innerHTML = "";
+  list.forEach((cam) => {
+    const el = document.createElement("div");
+    el.className = "cam";
+    const thumb = cam.thumbnail
+      ? '<img loading="lazy" src="' + cam.thumbnail + '" alt="" />'
+      : "NO SIGNAL";
+    el.innerHTML =
+      '<div class="thumb">' + thumb + "</div>" +
+      '<div class="info">' +
+        '<div class="title"></div>' +
+        '<div class="meta"><span class="st ' + cam.status + '"></span>' +
+        [cam.city, cam.country_name || cam.country].filter(Boolean).join(", ") +
+        "</div></div>";
+    el.querySelector(".title").textContent = cam.title;
+    el.onclick = () => openPlayer(cam);
+    box.appendChild(el);
+  });
+}
+
+function renderMarkers(list) {
+  markerLayer.clearLayers();
+  let withCoords = 0;
+  list.forEach((cam) => {
+    if (typeof cam.latitude !== "number" || typeof cam.longitude !== "number") return;
+    withCoords++;
+    const m = L.circleMarker([cam.latitude, cam.longitude], {
+      radius: 7,
+      color: statusColor(cam.status),
+      weight: 2,
+      fillColor: statusColor(cam.status),
+      fillOpacity: 0.35,
+    });
+    const div = document.createElement("div");
+    div.innerHTML =
+      '<div class="popup-title"></div>' +
+      '<div class="popup-meta">' +
+        [cam.city, cam.country_name || cam.country].filter(Boolean).join(", ") +
+      "</div>";
+    div.querySelector(".popup-title").textContent = cam.title;
+    const btn = document.createElement("button");
+    btn.className = "btn";
+    btn.textContent = "Putar";
+    btn.onclick = () => openPlayer(cam);
+    div.appendChild(btn);
+    m.bindPopup(div);
+    markerLayer.addLayer(m);
+  });
+  if (withCoords) {
+    map.fitBounds(markerLayer.getBounds().pad(0.25));
+  }
+}
+
+["q", "fCountry", "fStatus"].forEach((id) => {
+  document.getElementById(id).addEventListener("input", render);
+});
+
+/* ---------------- Pemutar ---------------- */
+function openPlayer(cam) {
+  const overlay = document.getElementById("overlay");
+  const box = document.getElementById("playerBox");
+  box.innerHTML = "";
+
+  document.getElementById("pTitle").textContent = cam.title;
+  document.getElementById("pMeta").textContent =
+    [cam.city, cam.region, cam.country_name || cam.country].filter(Boolean).join(" · ") +
+    "  ·  sumber: " + cam.source;
+  document.getElementById("pChips").innerHTML = (cam.categories || [])
+    .map((c) => '<span class="chip"></span>').join("");
+  document.querySelectorAll("#pChips .chip").forEach((el, i) => {
+    el.textContent = cam.categories[i];
+  });
+
+  const pageBtn = document.getElementById("pPage");
+  if (cam.page_url) {
+    pageBtn.style.display = "inline-block";
+    pageBtn.href = cam.page_url;
+  } else {
+    pageBtn.style.display = "none";
+  }
+  document.getElementById("pJson").href = API + "/cameras/" + encodeURIComponent(cam.id);
+
+  if (cam.source === "hls" && cam.stream_url) {
+    const video = document.createElement("video");
+    video.controls = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    box.appendChild(video);
+    if (window.Hls && Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(cam.stream_url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          box.innerHTML = '<div class="player-warn">Stream tidak dapat diputar (mungkin sedang offline).</div>';
+        }
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = cam.stream_url; // Safari/iOS
+    } else {
+      box.innerHTML = '<div class="player-warn">Browser ini tidak mendukung pemutaran HLS.</div>';
+    }
+  } else if (cam.embed_url) {
+    // Player embed resmi (mis. Windy) — cara legal untuk menonton webcam pihak lain.
+    const iframe = document.createElement("iframe");
+    iframe.src = cam.embed_url;
+    iframe.allow = "autoplay; fullscreen; encrypted-media";
+    iframe.setAttribute("allowfullscreen", "true");
+    box.appendChild(iframe);
+  } else {
+    box.innerHTML = '<div class="player-warn">Tidak ada URL pemutar untuk kamera ini.</div>';
+  }
+
+  overlay.classList.add("open");
+  document.querySelector("aside").classList.remove("show");
+}
+
+function closePlayer() {
+  if (hls) { hls.destroy(); hls = null; }
+  document.getElementById("playerBox").innerHTML = "";
+  document.getElementById("overlay").classList.remove("open");
+}
+
+document.getElementById("overlay").addEventListener("click", (e) => {
+  if (e.target.id === "overlay") closePlayer();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closePlayer();
+});
+
+loadCatalog();
+</script>
+</body>
+</html>

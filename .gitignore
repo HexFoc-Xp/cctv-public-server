@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Konfigurasi rahasia
+.env
+
+# Sistem / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Log & sementara
+*.log
+*.tmp

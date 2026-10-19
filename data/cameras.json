@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "updated_at": "2026-10-19T01:51:53.069175+00:00",
+  "cameras": [
+    {
+      "title": "DEMO 1 - Stream Uji HLS (ganti dengan kamera Anda)",
+      "source": "hls",
+      "stream_url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+      "embed_url": null,
+      "page_url": null,
+      "city": "Jakarta",
+      "region": "DKI Jakarta",
+      "country": "ID",
+      "country_name": "Indonesia",
+      "latitude": -6.2,
+      "longitude": 106.816666,
+      "categories": [
+        "demo",
+        "test"
+      ],
+      "thumbnail": null,
+      "id": "demo-hls-mux",
+      "status": "active",
+      "last_updated": "2026-10-19T00:00:00Z"
+    },
+    {
+      "title": "DEMO 2 - BipBop HLS Apple (contoh .m3u8 publik)",
+      "source": "hls",
+      "stream_url": "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8",
+      "embed_url": null,
+      "page_url": null,
+      "city": "Bandung",
+      "region": "Jawa Barat",
+      "country": "ID",
+      "country_name": "Indonesia",
+      "latitude": -6.914444,
+      "longitude": 107.609444,
+      "categories": [
+        "demo",
+        "test"
+      ],
+      "thumbnail": null,
+      "id": "demo-hls-apple",
+      "status": "active",
+      "last_updated": "2026-10-19T00:00:00Z"
+    }
+  ]
+}
