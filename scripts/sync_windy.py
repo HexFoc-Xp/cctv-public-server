@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import settings  # noqa: E402
+from app.models import dump_model  # noqa: E402
 from app.services.windy import fetch_webcams  # noqa: E402
 from app.storage import JsonStorage  # noqa: E402
 
@@ -63,7 +64,7 @@ async def main() -> None:
     print(f"[OK] {len(cameras)} webcam tersimpan (tersedia di Windy: {total}).")
     print(f"[OK] Total katalog: {storage.count()} kamera -> {settings.data_file}")
 
-    sample = [c.model_dump(mode="json") for c in cameras[:3]]
+    sample = [dump_model(c) for c in cameras[:3]]
     print("[i] Contoh 3 entri pertama:")
     print(json.dumps(sample, ensure_ascii=False, indent=2))
 

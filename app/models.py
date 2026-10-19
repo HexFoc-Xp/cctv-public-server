@@ -1,5 +1,12 @@
-"""Model data Pydantic untuk katalog kamera."""
+"""Model data Pydantic untuk katalog kamera.
 
+Kompatibel dengan pydantic v1 DAN v2:
+- v2 dipakai di Linux/Windows (requirements.txt)
+- v1 dipakai di Termux/Android (requirements-termux.txt) karena v2
+  membutuhkan pydantic-core (Rust) yang menyulitkan instalasi di HP.
+"""
+
+import json
 from datetime import datetime
 from typing import Literal, Optional
 
@@ -55,3 +62,14 @@ class PaginatedCameras(BaseModel):
     limit: int = Field(..., description="Jumlah item per halaman")
     pages: int = Field(..., description="Total halaman")
     items: list[Camera] = Field(..., description="Daftar kamera pada halaman ini")
+
+
+def dump_model(model: BaseModel, exclude: Optional[set] = None) -> dict:
+    """Serialisasi model pydantic ke dict yang JSON-safe (v1 & v2).
+
+    - pydantic v2 : model_dump(mode="json") — datetime dsb. otomatis diubah.
+    - pydantic v1 : .json(exclude=...) — sudah JSON-safe, parse balik ke dict.
+    """
+    if hasattr(model, "model_dump"):  # pydantic v2
+        return model.model_dump(mode="json", exclude=exclude)
+    return json.loads(model.json(exclude=exclude))  # pydantic v1

@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 from app.config import settings
-from app.models import Camera, CameraCreate
+from app.models import Camera, CameraCreate, dump_model
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
@@ -66,7 +66,7 @@ class JsonStorage:
             payload = {
                 "version": 1,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
-                "cameras": [cam.model_dump(mode="json") for cam in self._cameras.values()],
+                "cameras": [dump_model(cam) for cam in self._cameras.values()],
             }
             tmp = self.path.with_suffix(".tmp")
             tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -95,7 +95,7 @@ class JsonStorage:
             if camera_id in self._cameras:
                 camera_id = f"{camera_id}-{uuid.uuid4().hex[:6]}"
             camera = Camera(
-                **payload.model_dump(exclude={"id"}),
+                **dump_model(payload, exclude={"id"}),
                 id=camera_id,
                 status="active" if payload.source == "hls" else "unknown",
                 last_updated=datetime.now(timezone.utc),
@@ -111,7 +111,7 @@ class JsonStorage:
             if existing is None:
                 return None
             updated = Camera(
-                **payload.model_dump(exclude={"id"}),
+                **dump_model(payload, exclude={"id"}),
                 id=camera_id,
                 status=existing.status,
                 last_updated=datetime.now(timezone.utc),

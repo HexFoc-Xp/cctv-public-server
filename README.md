@@ -45,6 +45,28 @@ chmod +x run.sh
 
 Di Windows jalankan `run.bat` (double-click atau dari Command Prompt).
 
+### Instalasi di Termux (Android)
+
+Project ini **mendukung Termux langsung dari HP** — tanpa kompilasi Rust/C, karena versi Termux otomatis memakai dependensi *pure Python* (`requirements-termux.txt`: pydantic v1 + uvicorn polos).
+
+```bash
+pkg update -y
+pkg install -y git python python-pip
+git clone https://github.com/USERNAME/cctv-public-server.git
+cd cctv-public-server
+chmod +x run-termux.sh
+./run-termux.sh
+```
+
+`run-termux.sh` akan otomatis: memasang Python bila belum ada → membuat virtualenv (fallback ke pip sistem bila venv gagal) → memasang dependensi Termux → membuat `.env` → menjalankan server di `http://localhost:8000`.
+
+Catatan Termux:
+
+- Kode aplikasi kompatibel **pydantic v1 & v2** sekaligus, jadi versi Termux (v1) dan desktop (v2) berperilaku identik.
+- Akses dari HP/PC lain: cek IP HP di Termux (`ifconfig`, atau `pkg install net-tools`) lalu buka `http://IP_HP:8000`.
+- Stop server: `Ctrl+C` di Termux (tombol **Volume Down + C**).
+- Untuk menjalankan di latar belakang: `pkg install tmux` lalu jalankan di dalam sesi `tmux`.
+
 Server berjalan di:
 
 | URL | Keterangan |
@@ -191,9 +213,10 @@ cctv-public-server/
 ├── scripts/
 │   ├── sync_windy.py        # CLI sinkronisasi Windy
 │   └── github_push.sh       # Helper push pertama ke GitHub (pakai PAT)
-├── requirements.txt
+├── requirements.txt          # Dependensi utama (Linux/Windows, pydantic v2)
+├── requirements-termux.txt   # Dependensi Termux/Android (pure Python, pydantic v1)
 ├── .env.example
-├── run.sh / run.bat
+├── run.sh / run.bat / run-termux.sh
 ├── LICENSE (MIT)
 └── README.md
 ```
