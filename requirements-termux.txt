@@ -1,13 +1,17 @@
 # Dependensi versi Termux/Android — SEMUA pure Python (tanpa kompilasi Rust/C).
 #
 # Perbedaan dengan requirements.txt:
-#  - pydantic dipatok di v1 (pure Python; pydantic v2 butuh pydantic-core = Rust,
-#    yang tidak tersedia sebagai wheel Android dan berat dikompilasi di HP)
-#  - uvicorn polos TANPA ekstra [standard] (uvloop/httptools butuh ekstensi C)
+#  1) pydantic dipatok v1.10.26 — versi v1 terakhir yang RESMI mendukung
+#     Python 3.14 (versi Termux saat ini). pydantic v2 membutuhkan
+#     pydantic-core (biner Rust) yang tidak ada wheel Android-nya dan
+#     sering gagal import di Termux (ImportError pydantic_core).
+#  2) fastapi dipatok <0.128 — batas versi terakhir yang masih mendukung
+#     pydantic v1 (sejak 0.128 fastapi mewajibkan pydantic>=2.7).
+#  3) uvicorn polos TANPA ekstra [standard] (uvloop/httptools butuh ekstensi C).
 #
 # Kode aplikasi mendukung pydantic v1 & v2 sekaligus (lihat app/models.py).
-fastapi>=0.100,<1.0
-pydantic>=1.10.19,<2.0
+fastapi>=0.125.0,<0.128.0
+pydantic>=1.10.26,<2.0
 uvicorn>=0.30,<1.0
 httpx>=0.27,<1.0
 python-dotenv>=1.0,<2.0

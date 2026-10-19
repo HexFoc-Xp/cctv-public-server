@@ -15,5 +15,12 @@ echo "[*] Memasang dependensi ..."
 pip install -q --upgrade pip
 pip install -q -r requirements.txt
 
-echo "[*] Server jalan di http://localhost:${PORT:-8000}  (docs: /docs)"
-exec uvicorn app.main:app --host "${HOST:-0.0.0.0}" --port "${PORT:-8000}"
+# PORT=8000 (default) | PORT=random -> port acak otomatis dari sistem
+PORT="${PORT:-8000}"
+if [ "$PORT" = "random" ]; then
+  PORT="$(python -c 'import socket; s=socket.socket(); s.bind(("0.0.0.0", 0)); print(s.getsockname()[1]); s.close()')"
+  echo "[*] Port acak dipilih: $PORT"
+fi
+
+echo "[*] Server jalan di http://localhost:${PORT}  (docs: /docs)"
+exec uvicorn app.main:app --host "${HOST:-0.0.0.0}" --port "$PORT"

@@ -47,7 +47,7 @@ Di Windows jalankan `run.bat` (double-click atau dari Command Prompt).
 
 ### Instalasi di Termux (Android)
 
-Project ini **mendukung Termux langsung dari HP** — tanpa kompilasi Rust/C, karena versi Termux otomatis memakai dependensi *pure Python* (`requirements-termux.txt`: pydantic v1 + uvicorn polos).
+Project ini **mendukung Termux langsung dari HP** — tanpa kompilasi Rust/C, karena versi Termux otomatis memakai dependensi *pure Python* (`requirements-termux.txt`: pydantic v1.10.26 yang resmi mendukung Python 3.14 + uvicorn polos).
 
 ```bash
 pkg update -y
@@ -58,20 +58,40 @@ chmod +x run-termux.sh
 ./run-termux.sh
 ```
 
-`run-termux.sh` akan otomatis: memasang Python bila belum ada → membuat virtualenv (fallback ke pip sistem bila venv gagal) → memasang dependensi Termux → membuat `.env` → menjalankan server di `http://localhost:8000`.
+`run-termux.sh` akan otomatis: memasang Python bila belum ada → menyiapkan virtualenv `venv/` → memasang dependensi Termux → membuat `.env` → **memilih port acak** → menjalankan server. Alamat lengkap (mis. `http://localhost:53421`) langsung tampil di layar.
+
+**Port:** default Termux adalah **port ACAK** (berubah tiap dijalankan). Ingin port tetap?
+
+```bash
+PORT=8000 ./run-termux.sh      # port tetap 8000
+PORT=random ./run-termux.sh    # port acak (sama dengan default)
+```
 
 Catatan Termux:
 
-- Kode aplikasi kompatibel **pydantic v1 & v2** sekaligus, jadi versi Termux (v1) dan desktop (v2) berperilaku identik.
-- Akses dari HP/PC lain: cek IP HP di Termux (`ifconfig`, atau `pkg install net-tools`) lalu buka `http://IP_HP:8000`.
+- Akses dari HP/PC lain: cek IP HP di Termux (`ifconfig`, atau `pkg install net-tools`) lalu buka `http://IP_HP:<port>`.
 - Stop server: `Ctrl+C` di Termux (tombol **Volume Down + C**).
 - Untuk menjalankan di latar belakang: `pkg install tmux` lalu jalankan di dalam sesi `tmux`.
+
+#### Troubleshooting umum di Termux
+
+**`ImportError ... pydantic_core` / error pydantic saat `import fastapi`**
+Terjadi bila venv lama memuat pydantic v2 (butuh biner Rust yang tidak jalan di Android). Perbaikan:
+
+```bash
+./run-termux.sh            # script otomatis menurunkan versi pydantic ke v1.10.26
+# bila masih error:
+rm -rf venv && ./run-termux.sh
+```
+
+Jangan jalankan `pip install fastapi` manual di Termux tanpa file requirements — itu yang memasang pydantic v2 bermasalah. Selalu gunakan `./run-termux.sh`.
+
 
 Server berjalan di:
 
 | URL | Keterangan |
 |---|---|
-| `http://localhost:8000/` | Web viewer (peta + pemutar) |
+| `http://localhost:8000/` | Web viewer (peta + pemutar) — di Termux port default ACAK, lihat alamat yang tampil di layar |
 | `http://localhost:8000/docs` | Swagger UI — coba semua endpoint dari browser |
 | `http://localhost:8000/redoc` | ReDoc — dokumentasi API alternatif |
 | `http://localhost:8000/api/health` | Health check |
