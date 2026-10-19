@@ -86,6 +86,15 @@ rm -rf venv && ./run-termux.sh
 
 Jangan jalankan `pip install fastapi` manual di Termux tanpa file requirements — itu yang memasang pydantic v2 bermasalah. Selalu gunakan `./run-termux.sh`.
 
+**`run.sh: line 12: .venv/bin/activate: No such file or directory`**
+Terjadi karena `python3 -m venv` gagal dibuat (paket `python3-venv`/`ensurepip` belum terpasang) tapi folder `.venv` setengah jadi tetap tertinggal. Versi `run.sh` terbaru sudah mengatasi ini otomatis: folder rusak dihapus, venv dibuat ulang, dan bila venv tetap tidak bisa dibuat (atau pip diblokir PEP 668) otomatis fallback ke pip sistem. Perbaikan manual bila perlu:
+
+```bash
+rm -rf .venv
+sudo apt install python3-venv python3-pip   # Debian/Ubuntu
+./run.sh
+```
+
 
 Server berjalan di:
 

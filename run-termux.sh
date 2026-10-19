@@ -34,15 +34,25 @@ make_venv() {
   "$PYBIN" -m venv "$VENV_DIR" || python -m venv "$VENV_DIR"
 }
 if [ ! -x "$VENV_DIR/bin/python" ]; then
-  make_venv
+  make_venv || true
 fi
 
-PY="$VENV_DIR/bin/python"
-PIP="$VENV_DIR/bin/pip"
-[ -x "$PIP" ] || PIP="$PY -m pip"
+# Venv gagal dibuat (mis. ensurepip tak ada)? -> pakai Python sistem.
+if [ -x "$VENV_DIR/bin/python" ]; then
+  PY="$VENV_DIR/bin/python"
+  PIP="$VENV_DIR/bin/pip"
+  [ -x "$PIP" ] || PIP="$PY -m pip"
+else
+  echo "[!] Virtualenv tidak tersedia -> memakai Python sistem + --break-system-packages bila perlu"
+  PY="$PYBIN"
+  PIP="$PY -m pip"
+fi
 
 install_deps() {
-  $PIP install -r requirements-termux.txt
+  $PIP install -r requirements-termux.txt || {
+    echo "[!] pip gagal (mungkin PEP 668 / externally-managed) -> coba --break-system-packages ..."
+    $PIP install --break-system-packages -r requirements-termux.txt
+  }
 }
 
 echo "[3/4] Memasang dependensi (pure Python; venv lama yang rusak ikut diperbaiki) ..."
@@ -51,9 +61,13 @@ install_deps
 # Validasi import — bila venv lama masih rusak, buat ulang dari nol.
 if ! "$PY" -c "import fastapi, uvicorn, pydantic" >/dev/null 2>&1; then
   echo "[!] Lingkungan lama masih rusak -> membuat ulang ${VENV_DIR} dari nol ..."
-  make_venv
-  PIP="$VENV_DIR/bin/pip"
-  install_deps
+  make_venv || true
+  if [ -x "$VENV_DIR/bin/python" ]; then
+    PY="$VENV_DIR/bin/python"
+    PIP="$VENV_DIR/bin/pip"
+    [ -x "$PIP" ] || PIP="$PY -m pip"
+    install_deps
+  fi
   "$PY" -c "import fastapi, uvicorn, pydantic" || {
     echo "[X] Gagal memasang dependensi. Salin pesan error di atas untuk laporan."
     exit 1
